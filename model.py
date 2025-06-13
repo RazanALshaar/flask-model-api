@@ -3,14 +3,21 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 import numpy as np
 import os
+import gdown
 
-# إعداد Flask
 app = Flask(__name__)
 
-# تحميل النموذج المدرب مرة واحدة
-model = load_model("/content/drive/MyDrive/model_xception5.h5")
+model_path = "model_xception5.h5"
+if not os.path.exists(model_path):
+    file_id = "1-1UKhBbK54a2AfThBrZVenD9XvunyHFt"
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, model_path, quiet=False)
 
-# دالة لتحضير الصورة
+
+# تحميل النموذج
+model = load_model(model_path)
+
+# تجهيز الصورة
 def prepare_image(img_path):
     img = image.load_img(img_path, target_size=(224, 224))
     img_array = image.img_to_array(img)
@@ -18,6 +25,7 @@ def prepare_image(img_path):
     img_array /= 255.0
     return img_array
 
+# مسار التنبؤ
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
@@ -27,11 +35,9 @@ def predict():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    # حفظ الصورة مؤقتاً
     temp_path = 'temp_image.jpg'
     file.save(temp_path)
 
-    # تجهيز الصورة والتنبؤ
     try:
         img_array = prepare_image(temp_path)
         predictions = model.predict(img_array)
@@ -49,4 +55,4 @@ def predict():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
